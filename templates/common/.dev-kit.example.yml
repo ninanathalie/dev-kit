@@ -1,0 +1,22 @@
+# dev-kit project configuration
+# Copy this file to your project root as `.dev-kit.yml` and fill in the values.
+
+# Project prefix used in branch names and issue references (e.g., ATLAS, TEMPO)
+project-prefix: MY-PROJECT
+
+# GitHub repository in the format owner/repo
+github-repo: owner/repo-name
+
+# GitHub Project board number (from https://github.com/users/{owner}/projects/{number})
+github-project-number: 1
+
+# GitHub username to auto-assign issues and PRs to
+assignee: your-github-username
+
+# Framework: nextjs | react | react-native | vue | flutter
+framework: nextjs
+
+# Branch configuration
+branches:
+  main: main
+  development: develop
