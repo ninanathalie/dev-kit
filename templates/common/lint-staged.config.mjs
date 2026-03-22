@@ -5,7 +5,7 @@
  * Triggered by the `.husky/pre-commit` hook.
  *
  * For JS/TS projects: Next.js, React, React Native, Vue.js
- * For Flutter: see lint-staged.flutter.config.mjs
+ * For Flutter: see templates/flutter/lint-staged.config.mjs
  *
  * See: https://github.com/lint-staged/lint-staged
  */

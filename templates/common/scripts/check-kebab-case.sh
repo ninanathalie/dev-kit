@@ -8,7 +8,7 @@
 # Rules:
 #   - File names must be lowercase
 #   - Words separated by hyphens (kebab-case)
-#   - Dots allowed for extensions and dotfiles (e.g., .gitignore, app.config.mjs)
+#   - Dots allowed for extensions and config files (e.g., .gitignore, app.config.mjs)
 #   - Leading dots allowed for hidden/config files (e.g., .eslintrc, .prettierrc)
 #   - Numbers allowed (e.g., error-404.tsx)
 #
@@ -42,13 +42,12 @@ EXCEPTION_DIRS=(
   "ISSUE_TEMPLATE"
 )
 
-# Get all staged files (added, copied, modified, renamed — excludes deleted)
-staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
-
 # Track whether any violations were found
 has_error=false
 
-for file in $staged_files; do
+# Use NUL-delimited output (-z) to safely handle file paths with spaces/special chars.
+# Read staged files (added, copied, modified, renamed — excludes deleted).
+while IFS= read -r -d '' file; do
   # Extract just the file name (no directory path)
   filename=$(basename "$file")
   dirpath=$(dirname "$file")
@@ -63,9 +62,9 @@ for file in $staged_files; do
   done
   [ "$skip" = true ] && continue
 
-  # Skip files inside exception directories
+  # Skip files inside exception directories (fixed-string match)
   for exception_dir in "${EXCEPTION_DIRS[@]}"; do
-    if echo "$dirpath" | grep -q "$exception_dir"; then
+    if echo "$dirpath" | grep -Fq "$exception_dir"; then
       skip=true
       break
     fi
@@ -73,21 +72,21 @@ for file in $staged_files; do
   [ "$skip" = true ] && continue
 
   # Skip husky hook files (they have no extension by convention)
-  if echo "$dirpath" | grep -q ".husky"; then
+  if echo "$dirpath" | grep -Fq ".husky"; then
     continue
   fi
 
-  # Validate: file name (without extension) must be kebab-case.
+  # Validate: file name must be kebab-case.
   # Allowed pattern: optional leading dot, lowercase letters, numbers, hyphens,
   # and dots (for multi-part extensions like .config.mjs)
   if ! echo "$filename" | grep -qE '^\.?[a-z0-9]+([.-][a-z0-9]+)*(\.[a-z0-9]+)*$'; then
     echo "ERROR: File name is not kebab-case: $file"
-    echo "       Expected: lowercase letters, numbers, and hyphens only"
-    echo "       Example:  user-profile.tsx, app-config.mjs"
+    echo "       Expected: lowercase letters, numbers, hyphens, and dots (for extensions)"
+    echo "       Example:  user-profile.tsx, app.config.mjs"
     echo ""
     has_error=true
   fi
-done
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
 
 if [ "$has_error" = true ]; then
   echo "──────────────────────────────────────────────────────"

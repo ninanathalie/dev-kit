@@ -7,8 +7,12 @@
 #
 # Installed by Husky. See: https://typicode.github.io/husky
 
+# Exit immediately if any command fails (ensures kebab-case failure blocks the commit)
+set -e
+
 # Step 1: Enforce kebab-case file names on all staged files
 bash "$(dirname "$0")/../scripts/check-kebab-case.sh"
 
 # Step 2: Run lint-staged (ESLint + Prettier for JS/TS, dart format for Flutter)
-NODE_NO_WARNINGS=1 npx lint-staged
+# --no flag prevents npx from auto-installing if lint-staged is missing
+NODE_NO_WARNINGS=1 npx --no -- lint-staged

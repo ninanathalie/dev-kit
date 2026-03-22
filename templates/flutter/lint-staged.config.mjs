@@ -10,8 +10,8 @@
  */
 
 const config = {
-  // Dart files — format with dart format, then run static analysis
-  "*.dart": ["dart format --fix", "dart analyze --fatal-infos"],
+  // Dart files — format, then run static analysis
+  "*.dart": ["dart format", "dart analyze --fatal-infos"],
 
   // Non-code files — format with Prettier
   "*.{json,md,yml,yaml}": ["prettier --write"],
