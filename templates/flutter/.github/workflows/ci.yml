@@ -1,0 +1,56 @@
+# CI Workflow — Flutter
+#
+# Runs on pull requests targeting develop or main branches.
+# Validates code quality, tests, and build integrity.
+#
+# Steps:
+#   1. Static analysis (dart analyze — enforces analysis_options.yaml rules)
+#   2. Run unit and widget tests
+#   3. Flutter build (APK by default — change to ios/web as needed)
+#
+# Required status check name: "Analyze, Test & Build"
+
+name: Analyze, Test & Build
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Analyze, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.x"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Enforces rules from analysis_options.yaml
+      # --fatal-infos treats info-level issues as failures
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+      # Build APK to verify compilation succeeds
+      # Change to `flutter build ios --no-codesign` or `flutter build web` as needed
+      - name: Build
+        run: flutter build apk --release
