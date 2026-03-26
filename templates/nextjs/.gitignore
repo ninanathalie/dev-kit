@@ -1,0 +1,63 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+
+# ─── Next.js ─────────────────────────────────────────────────────────────────────
+.next/
+out/
+build/
+next-env.d.ts
+
+# ─── Environment Variables ───────────────────────────────────────────────────────
+# Keep .env.example as a reference; ignore everything else
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+
+# ─── Testing & Coverage ─────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── TypeScript ──────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Caches ──────────────────────────────────────────────────────────────────────
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# ─── Logs ────────────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── OS Files ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor / IDE ────────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── Deployment ──────────────────────────────────────────────────────────────────
+.vercel/
+
+# ─── Misc ────────────────────────────────────────────────────────────────────────
+*.tgz
+.cache/
+*.pem
+
+# ─── Generated Code ─────────────────────────────────────────────────────────────
+# Prisma client (if using Prisma ORM)
+src/generated/
