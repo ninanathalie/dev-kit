@@ -1,0 +1,56 @@
+# Issue Auto-Assignment Workflow
+#
+# Triggers when a new issue is opened.
+# Automatically assigns the issue to the configured author and adds it to the project board.
+#
+# Reads: .dev-kit.yml (assignee, github-project-number)
+#
+# This ensures every issue — whether created via GitHub UI, CLI, or API —
+# is always assigned and tracked on the project board without manual steps.
+
+name: Issue Auto-Assign
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  auto-assign:
+    name: Assign & Add to Project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read config from .dev-kit.yml
+        id: config
+        run: |
+          ASSIGNEE=$(grep '^assignee:' .dev-kit.yml | sed 's/assignee: *//' | tr -d '[:space:]')
+          PROJECT_NUMBER=$(grep '^github-project-number:' .dev-kit.yml | sed 's/github-project-number: *//' | tr -d '[:space:]')
+
+          echo "assignee=$ASSIGNEE" >> "$GITHUB_OUTPUT"
+          echo "project_number=$PROJECT_NUMBER" >> "$GITHUB_OUTPUT"
+
+          echo "Config loaded — assignee: $ASSIGNEE, project: $PROJECT_NUMBER"
+
+      - name: Assign issue to configured author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ASSIGNEE: ${{ steps.config.outputs.assignee }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --add-assignee "$ASSIGNEE"
+          echo "Assigned issue #$ISSUE_NUMBER to $ASSIGNEE"
+
+      - name: Add issue to project board
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: ${{ steps.config.outputs.project_number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          gh project item-add "$PROJECT_NUMBER" \
+            --owner "$REPO_OWNER" \
+            --url "$ISSUE_URL"
+          echo "Added issue to project board #$PROJECT_NUMBER"
