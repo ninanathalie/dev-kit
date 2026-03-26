@@ -1,0 +1,126 @@
+# PR Auto-Fill Workflow
+#
+# Runs when a pull request is opened or reopened.
+# Automates PR housekeeping so you can focus on code, not admin.
+#
+# What it does:
+#   1. Extracts the issue number from the branch name (e.g., feat/ATLAS-12 → #12)
+#   2. Auto-assigns the PR to the configured author
+#   3. Copies labels from the linked issue to the PR
+#   4. Appends "Closes #<number>" to the PR body (if not already present)
+#   5. Adds the PR to the configured GitHub Project board
+#
+# Reads: .dev-kit.yml (project-prefix, assignee, github-project-number)
+# Skips: Forked PRs (read-only token limitation)
+#
+# Required secrets: GITHUB_TOKEN (default) — needs project write access
+
+name: PR Auto-Fill
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  autofill:
+    name: Auto-Fill PR
+    runs-on: ubuntu-latest
+
+    # Skip for forked PRs — the GITHUB_TOKEN has read-only access on forks
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read config from .dev-kit.yml
+        id: config
+        run: |
+          PREFIX=$(grep '^project-prefix:' .dev-kit.yml | sed 's/project-prefix: *//' | tr -d '[:space:]')
+          ASSIGNEE=$(grep '^assignee:' .dev-kit.yml | sed 's/assignee: *//' | tr -d '[:space:]')
+          PROJECT_NUMBER=$(grep '^github-project-number:' .dev-kit.yml | sed 's/github-project-number: *//' | tr -d '[:space:]')
+
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "assignee=$ASSIGNEE" >> "$GITHUB_OUTPUT"
+          echo "project_number=$PROJECT_NUMBER" >> "$GITHUB_OUTPUT"
+
+          echo "Config loaded — prefix: $PREFIX, assignee: $ASSIGNEE, project: $PROJECT_NUMBER"
+
+      - name: Extract issue number from branch name
+        id: issue
+        env:
+          BRANCH: ${{ github.head_ref }}
+          PREFIX: ${{ steps.config.outputs.prefix }}
+        run: |
+          # Branch format: type/PREFIX-number (e.g., feat/ATLAS-12)
+          # Extract the number after the prefix
+          ISSUE_NUMBER=$(echo "$BRANCH" | grep -oE "${PREFIX}-[0-9]+" | grep -oE "[0-9]+$" | sed 's/^0*//')
+
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "No issue number found in branch name: $BRANCH"
+            echo "Expected format: type/${PREFIX}-<number>"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Extracted issue number: #$ISSUE_NUMBER"
+          fi
+
+      - name: Assign PR to author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSIGNEE: ${{ steps.config.outputs.assignee }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --add-assignee "$ASSIGNEE"
+          echo "Assigned PR #$PR_NUMBER to $ASSIGNEE"
+
+      - name: Copy labels from issue to PR
+        if: steps.issue.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Fetch labels from the linked issue
+          LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' | paste -sd ',' -)
+
+          if [ -n "$LABELS" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "$LABELS"
+            echo "Copied labels from issue #$ISSUE_NUMBER: $LABELS"
+          else
+            echo "No labels found on issue #$ISSUE_NUMBER"
+          fi
+
+      - name: Append "Closes #<number>" to PR body
+        if: steps.issue.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Get current PR body
+          BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body')
+
+          # Only append if "Closes #<number>" is not already present
+          if echo "$BODY" | grep -qiE "closes #${ISSUE_NUMBER}"; then
+            echo "PR body already contains 'Closes #$ISSUE_NUMBER' — skipping"
+          else
+            UPDATED_BODY="${BODY}
+
+          Closes #${ISSUE_NUMBER}"
+            gh pr edit "$PR_NUMBER" --body "$UPDATED_BODY"
+            echo "Appended 'Closes #$ISSUE_NUMBER' to PR body"
+          fi
+
+      - name: Add PR to project board
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: ${{ steps.config.outputs.project_number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          gh project item-add "$PROJECT_NUMBER" \
+            --owner "$REPO_OWNER" \
+            --url "$PR_URL"
+          echo "Added PR to project board #$PROJECT_NUMBER"
