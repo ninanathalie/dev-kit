@@ -1,0 +1,38 @@
+name: Chore
+description: Tooling, config, maintenance, or housekeeping task.
+title: "chore: "
+labels: ["chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for tasks that don't change application behavior — config updates, dependency bumps, CI changes, cleanup, etc.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done and why.
+      placeholder: "Describe the task and its purpose."
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: Break down the work into checkboxes if applicable.
+      placeholder: |
+        - [ ] Task 1
+        - [ ] Task 2
+        - [ ] Task 3
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any related issues, links, or notes.
+    validations:
+      required: false
