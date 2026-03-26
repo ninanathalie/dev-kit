@@ -1,0 +1,137 @@
+# Create Branch from Issue Workflow
+#
+# Triggers when an issue is labeled `ready-for-dev`.
+# Auto-creates a feature branch from the development branch with the correct naming convention.
+#
+# How it works:
+#   1. Reads project prefix and dev branch from .dev-kit.yml
+#   2. Determines branch type from issue labels:
+#      - "bug" label       → fix/PREFIX-<number>
+#      - "chore" label     → chore/PREFIX-<number>
+#      - "improvement" label → refactor/PREFIX-<number>
+#      - "documentation" label → docs/PREFIX-<number>
+#      - default           → feat/PREFIX-<number>
+#   3. Creates the branch from the development branch
+#   4. Comments on the issue with checkout instructions
+#
+# Skips if the branch already exists.
+# Issue number is zero-padded to 2 digits (e.g., 01, 02, ... 99).
+
+name: Create Branch from Issue
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  create-branch:
+    name: Create Branch
+    runs-on: ubuntu-latest
+
+    # Only run when the "ready-for-dev" label is added
+    if: github.event.label.name == 'ready-for-dev'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read config from .dev-kit.yml
+        id: config
+        run: |
+          PREFIX=$(grep '^project-prefix:' .dev-kit.yml | sed 's/project-prefix: *//' | tr -d '[:space:]')
+          DEV_BRANCH=$(grep '  development:' .dev-kit.yml | sed 's/  development: *//' | tr -d '[:space:]')
+
+          # Default to "develop" if not specified
+          DEV_BRANCH="${DEV_BRANCH:-develop}"
+
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+
+          echo "Config loaded — prefix: $PREFIX, dev branch: $DEV_BRANCH"
+
+      - name: Determine branch type from issue labels
+        id: branch-type
+        env:
+          LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
+        run: |
+          # Map issue labels to branch type prefixes
+          # Priority order: bug > chore > documentation > improvement > default (feat)
+          if echo "$LABELS" | grep -qi '"bug"'; then
+            TYPE="fix"
+          elif echo "$LABELS" | grep -qi '"chore"'; then
+            TYPE="chore"
+          elif echo "$LABELS" | grep -qi '"documentation"'; then
+            TYPE="docs"
+          elif echo "$LABELS" | grep -qi '"improvement"'; then
+            TYPE="refactor"
+          else
+            TYPE="feat"
+          fi
+
+          echo "type=$TYPE" >> "$GITHUB_OUTPUT"
+          echo "Branch type: $TYPE"
+
+      - name: Build branch name
+        id: branch-name
+        env:
+          PREFIX: ${{ steps.config.outputs.prefix }}
+          TYPE: ${{ steps.branch-type.outputs.type }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Zero-pad the issue number to 2 digits (e.g., 1 → 01, 12 → 12)
+          PADDED_NUMBER=$(printf "%02d" "$ISSUE_NUMBER")
+
+          BRANCH_NAME="${TYPE}/${PREFIX}-${PADDED_NUMBER}"
+
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          echo "Branch name: $BRANCH_NAME"
+
+      - name: Check if branch already exists
+        id: check
+        env:
+          BRANCH_NAME: ${{ steps.branch-name.outputs.branch_name }}
+        run: |
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Branch $BRANCH_NAME already exists — skipping creation"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create branch from development branch
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch-name.outputs.branch_name }}
+          DEV_BRANCH: ${{ steps.config.outputs.dev_branch }}
+        run: |
+          # Get the SHA of the development branch
+          DEV_SHA=$(git rev-parse "origin/${DEV_BRANCH}")
+
+          # Create the branch via GitHub API
+          gh api repos/${{ github.repository }}/git/refs \
+            --method POST \
+            -f ref="refs/heads/${BRANCH_NAME}" \
+            -f sha="$DEV_SHA"
+
+          echo "Created branch: $BRANCH_NAME from $DEV_BRANCH ($DEV_SHA)"
+
+      - name: Comment on issue with checkout instructions
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH_NAME: ${{ steps.branch-name.outputs.branch_name }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "$(cat <<EOF
+          🔀 Branch \`${BRANCH_NAME}\` has been created.
+
+          To start working on this issue:
+          \`\`\`bash
+          git fetch origin
+          git checkout ${BRANCH_NAME}
+          \`\`\`
+          EOF
+          )"
+
+          echo "Commented on issue #$ISSUE_NUMBER"
