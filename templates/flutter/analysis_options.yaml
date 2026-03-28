@@ -1,0 +1,62 @@
+# Flutter/Dart Analysis Options
+#
+# Static analysis configuration for Dart code.
+# Enforced by `dart analyze` in CI and pre-commit hooks.
+#
+# Extends flutter_lints (recommended ruleset from the Flutter team).
+# Custom rules below are stricter overrides for code consistency.
+#
+# Requires: flutter_lints (add to dev_dependencies in pubspec.yaml)
+# See: https://dart.dev/tools/analysis
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  # Treat these issue severities as errors in CI (dart analyze --fatal-infos)
+  errors:
+    missing_return: error
+    dead_code: warning
+    unused_import: warning
+    unused_local_variable: warning
+
+  # Exclude generated code from analysis
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+    - "build/**"
+    - ".dart_tool/**"
+
+linter:
+  rules:
+    # ─── Style ───────────────────────────────────────────────────────────────────
+    # Enforce kebab-case for file names (matches project convention)
+    file_names: true
+
+    # Prefer single quotes for strings (Dart convention)
+    prefer_single_quotes: true
+
+    # Always use curly braces for control flow (even single-line)
+    always_use_package_imports: true
+    curly_braces_in_flow_control_structures: true
+
+    # ─── Safety ──────────────────────────────────────────────────────────────────
+    # Avoid using print() in production code (use a logger instead)
+    avoid_print: true
+
+    # Prefer const constructors for immutable widgets (performance)
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+
+    # ─── Readability ─────────────────────────────────────────────────────────────
+    # Require type annotations on public APIs
+    always_declare_return_types: true
+
+    # Prefer final for local variables that are never reassigned
+    prefer_final_locals: true
+
+    # Use trailing commas for better diffs and formatting
+    require_trailing_commas: true
+
+    # Avoid unnecessary lambdas (use tear-offs instead)
+    unnecessary_lambdas: true
