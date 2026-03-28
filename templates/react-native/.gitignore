@@ -1,0 +1,75 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+
+# ─── Build Output ────────────────────────────────────────────────────────────────
+# Android
+android/app/build/
+android/.gradle/
+android/build/
+
+# iOS
+ios/build/
+ios/Pods/
+ios/DerivedData/
+
+# Metro bundler
+*.jsbundle
+
+# ─── Environment Variables ───────────────────────────────────────────────────────
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+
+# ─── Testing & Coverage ─────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── TypeScript ──────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Caches ──────────────────────────────────────────────────────────────────────
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# ─── React Native / Expo ─────────────────────────────────────────────────────────
+.expo/
+*.hprof
+
+# ─── CocoaPods (iOS) ─────────────────────────────────────────────────────────────
+ios/Podfile.lock
+
+# ─── Logs ────────────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── OS Files ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor / IDE ────────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── Signing Keys ───────────────────────────────────────────────────────────────
+*.keystore
+!debug.keystore
+*.jks
+*.pem
+
+# ─── Misc ────────────────────────────────────────────────────────────────────────
+*.tgz
+.cache/
