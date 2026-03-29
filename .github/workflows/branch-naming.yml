@@ -1,0 +1,47 @@
+# Branch Naming Validation — dev-kit (self-sustained)
+#
+# This is dev-kit's own workflow, NOT a template.
+# Templates for target projects are in templates/common/.github/workflows/
+#
+# Validates branch names follow: {type}/BASE-{number}
+# Hardcoded to BASE prefix since this is the dev-kit repo itself.
+
+name: Validate Branch Name
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - develop
+      - master
+
+jobs:
+  validate:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch name
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          # Skip validation for base branches
+          if echo "$BRANCH" | grep -qE '^(develop|main|master)$'; then
+            echo "Base branch detected — skipping validation."
+            exit 0
+          fi
+
+          TYPES="feat|fix|hotfix|chore|docs|refactor|test|ci"
+          PATTERN="^($TYPES)/BASE-[0-9]+$"
+
+          if echo "$BRANCH" | grep -qE "$PATTERN"; then
+            echo "Branch name is valid: $BRANCH"
+          else
+            echo "::error::Invalid branch name: $BRANCH"
+            echo ""
+            echo "Branch name must follow the format: {type}/BASE-{number}"
+            echo "  Example: feat/BASE-01, fix/BASE-12, ci/BASE-33"
+            echo ""
+            echo "Allowed types: feat, fix, hotfix, chore, docs, refactor, test, ci"
+            exit 1
+          fi
