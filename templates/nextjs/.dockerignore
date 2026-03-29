@@ -1,0 +1,48 @@
+# .dockerignore — Next.js
+#
+# Prevents unnecessary files from being sent to the Docker build context.
+# Keeps build fast and images small.
+
+# Dependencies (installed fresh in the container)
+node_modules/
+
+# Next.js build output (rebuilt in the container)
+.next/
+out/
+
+# Version control
+.git/
+.gitignore
+
+# Environment files (pass via docker run --env-file or compose)
+.env
+.env.*
+!.env.example
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dev-kit and CI (not needed in container)
+.dev-kit.yml
+.husky/
+.github/
+scripts/
+docs/
+
+# Testing
+coverage/
+*.test.*
+*.spec.*
+__tests__/
+
+# Misc
+README.md
+LICENSE
+*.md
