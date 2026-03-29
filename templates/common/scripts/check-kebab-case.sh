@@ -35,6 +35,7 @@ EXCEPTIONS=(
   "CONTRIBUTING.md"
   "CODE_OF_CONDUCT.md"
   "CODEOWNERS"
+  "analysis_options.yaml"
 )
 
 # Directories where file casing is dictated by external tools (e.g., GitHub)

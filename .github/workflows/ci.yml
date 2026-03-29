@@ -35,7 +35,7 @@ jobs:
           # Check all tracked files for kebab-case compliance
           # Uses the same logic as templates/common/scripts/check-kebab-case.sh
 
-          EXCEPTIONS="README.md README LICENSE LICENSE.md Makefile Dockerfile Procfile CHANGELOG.md CONTRIBUTING.md CODE_OF_CONDUCT.md CODEOWNERS"
+          EXCEPTIONS="README.md README LICENSE LICENSE.md Makefile Dockerfile Procfile CHANGELOG.md CONTRIBUTING.md CODE_OF_CONDUCT.md CODEOWNERS analysis_options.yaml"
           EXCEPTION_DIRS="ISSUE_TEMPLATE"
 
           has_error=false
