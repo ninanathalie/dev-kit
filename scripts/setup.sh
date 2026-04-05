@@ -215,7 +215,7 @@ else
 fi
 
 # GitHub workflows (common — framework-agnostic)
-for workflow in pr-title.yml branch-naming.yml pr-autofill.yml create-branch.yml issue-auto-assign.yml; do
+for workflow in pr-title.yml branch-naming.yml pr-autofill.yml create-branch.yml issue-auto-assign.yml e2e.yml check-devkit-updates.yml; do
   copy_file "$TEMPLATES_DIR/common/.github/workflows/$workflow" "$TARGET_DIR/.github/workflows/$workflow"
 done
 
@@ -313,26 +313,3 @@ echo "    3. Run: npx husky (to initialize hooks)"
 echo "    4. Create your first issue:"
 echo "       bash scripts/create-issue.sh --type feat --title \"initial setup\""
 echo ""
-
-# ─── Step 7: Offer to register in downstream-repos.yml ──────────────────────────
-DOWNSTREAM_FILE="$DEV_KIT_DIR/downstream-repos.yml"
-
-if [ -f "$DOWNSTREAM_FILE" ]; then
-  # Check if repo is already registered
-  if grep -q "$GITHUB_REPO" "$DOWNSTREAM_FILE"; then
-    print_success "$GITHUB_REPO is already registered in downstream-repos.yml"
-  else
-    echo -e "${YELLOW}Would you like to register this project for automatic update notifications?${NC}"
-    echo -e "${DIM}This adds $GITHUB_REPO to dev-kit's downstream-repos.yml so you get${NC}"
-    echo -e "${DIM}notified when templates are updated.${NC}"
-    echo ""
-    read -rp "Register for notifications? (y/n): " register_choice
-
-    if [ "$register_choice" = "y" ] || [ "$register_choice" = "Y" ]; then
-      echo "  - $GITHUB_REPO" >> "$DOWNSTREAM_FILE"
-      print_success "Registered $GITHUB_REPO in downstream-repos.yml"
-      echo -e "  ${DIM}Remember to commit this change in the dev-kit repo.${NC}"
-    fi
-  fi
-  echo ""
-fi
