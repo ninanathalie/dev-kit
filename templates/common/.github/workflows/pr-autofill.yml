@@ -26,8 +26,8 @@ jobs:
     name: Auto-Fill PR
     runs-on: ubuntu-latest
 
-    # Skip for forked PRs — the GITHUB_TOKEN has read-only access on forks
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Skip for forked PRs and Dependabot PRs
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
