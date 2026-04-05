@@ -234,8 +234,8 @@ print_step 4 "Copying $FRAMEWORK-specific templates"
 # CI workflow
 copy_file "$TEMPLATES_DIR/$FRAMEWORK/.github/workflows/ci.yml" "$TARGET_DIR/.github/workflows/ci.yml"
 
-# .gitignore
-copy_file "$TEMPLATES_DIR/$FRAMEWORK/.gitignore" "$TARGET_DIR/.gitignore"
+# .gitignore (stored as "gitignore" without dot so npm includes it in the package)
+copy_file "$TEMPLATES_DIR/$FRAMEWORK/gitignore" "$TARGET_DIR/.gitignore"
 
 # Linting config
 if [ "$FRAMEWORK" = "flutter" ]; then

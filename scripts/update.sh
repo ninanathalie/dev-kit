@@ -123,7 +123,8 @@ add_framework_file() {
 }
 
 add_framework_file ".github/workflows/ci.yml" ".github/workflows/ci.yml"
-add_framework_file ".gitignore" ".gitignore"
+# .gitignore stored as "gitignore" (no dot) so npm includes it in the package
+add_framework_file "gitignore" ".gitignore"
 
 if [ "$FRAMEWORK" = "flutter" ]; then
   add_framework_file "analysis_options.yaml" "analysis_options.yaml"
