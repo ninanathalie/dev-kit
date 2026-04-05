@@ -89,7 +89,8 @@ jobs:
 
           # Framework-specific templates
           compare_file "$DEV_KIT/$FRAMEWORK/.github/workflows/ci.yml" ".github/workflows/ci.yml" ".github/workflows/ci.yml"
-          compare_file "$DEV_KIT/$FRAMEWORK/.gitignore" ".gitignore" ".gitignore"
+          # .gitignore stored as "gitignore" (no dot) so npm includes it in the package
+          compare_file "$DEV_KIT/$FRAMEWORK/gitignore" ".gitignore" ".gitignore"
 
           if [ "$FRAMEWORK" = "flutter" ]; then
             compare_file "$DEV_KIT/$FRAMEWORK/analysis_options.yaml" "analysis_options.yaml" "analysis_options.yaml"
