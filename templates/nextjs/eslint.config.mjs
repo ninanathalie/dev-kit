@@ -1,44 +1,43 @@
 /**
  * ESLint Configuration — Next.js
  *
- * Uses flat config format (ESLint v9+).
+ * Uses native flat config format (ESLint v9+ / eslint-config-next v16+).
  *
  * Extends:
  *   - next/core-web-vitals: Next.js recommended rules + Core Web Vitals checks
  *   - next/typescript: TypeScript-aware rules for Next.js
  *   - prettier: Disables formatting rules that conflict with Prettier
  *
- * Requires: eslint, eslint-config-next, eslint-config-prettier
+ * Requires: eslint (^9), eslint-config-next (^16), eslint-config-prettier
  * See: https://nextjs.org/docs/app/api-reference/config/eslint
  */
 
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+import prettier from "eslint-config-prettier";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  prettier,
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends(
-    "next/core-web-vitals",
-    "next/typescript",
-    "prettier"
-  ),
+  // Allow anonymous default exports in config files (next.config.ts, etc.)
   {
+    files: ["*.config.mjs", ".prettierrc.mjs"],
     rules: {
-      // Allow anonymous default exports in config files (next.config.ts, etc.)
       "import/no-anonymous-default-export": "off",
     },
   },
-  {
-    // Files and directories to ignore
-    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
-  },
-];
+
+  // Files and directories to ignore
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "src/generated/**",
+  ]),
+]);
 
 export default eslintConfig;
