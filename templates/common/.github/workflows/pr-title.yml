@@ -1,0 +1,53 @@
+# PR Title Validation Workflow
+#
+# Runs on pull requests targeting develop or main branches.
+# Validates that the PR title follows Conventional Commits format.
+#
+# Valid formats:
+#   type: message            → e.g., "feat: add login page"
+#   type(scope): message     → e.g., "feat(auth): add login page"
+#
+# Allowed types: feat, fix, hotfix, chore, docs, style, refactor, test, build, ci, revert, perf
+# Scope: optional, must be kebab-case (lowercase, hyphens)
+#
+# Required status check name: "Validate PR Title"
+
+name: Validate PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches:
+      - develop
+      - main
+      - master
+
+jobs:
+  validate:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Allowed commit/PR types (must match commitlint.config.mjs)
+          TYPES="feat|fix|hotfix|chore|docs|style|refactor|test|build|ci|revert|perf"
+
+          # Pattern: type(optional-kebab-scope): message
+          PATTERN="^($TYPES)(\([a-z0-9]+(-[a-z0-9]+)*\))?: .+"
+
+          if echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+            echo "PR title is valid: $PR_TITLE"
+          else
+            echo "::error::Invalid PR title: $PR_TITLE"
+            echo ""
+            echo "PR title must follow Conventional Commits format:"
+            echo "  type: message            → e.g., feat: add login page"
+            echo "  type(scope): message     → e.g., feat(auth): add login page"
+            echo ""
+            echo "Allowed types: feat, fix, hotfix, chore, docs, style, refactor, test, build, ci, revert, perf"
+            echo "Scope must be kebab-case (lowercase letters, numbers, hyphens)"
+            exit 1
+          fi

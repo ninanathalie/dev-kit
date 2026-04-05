@@ -1,0 +1,169 @@
+# PR Auto-Fill Workflow
+#
+# Runs when a pull request is opened or reopened.
+# Automates PR housekeeping so you can focus on code, not admin.
+#
+# What it does:
+#   1. Extracts the issue number from the branch name (e.g., feat/ATLAS-12 → #12)
+#   2. Auto-generates the PR description (summary, changes from commits, stats, closes link)
+#   3. Auto-assigns the PR to the configured author
+#   4. Copies labels from the linked issue to the PR
+#   5. Adds the PR to the configured GitHub Project board
+#
+# Reads: .dev-kit.yml (project-prefix, assignee, github-project-number)
+# Skips: Forked PRs (read-only token limitation)
+#
+# Required secrets: GITHUB_TOKEN (default) — needs project write access
+
+name: PR Auto-Fill
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  autofill:
+    name: Auto-Fill PR
+    runs-on: ubuntu-latest
+
+    # Skip for forked PRs — the GITHUB_TOKEN has read-only access on forks
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read config from .dev-kit.yml
+        id: config
+        run: |
+          PREFIX=$(grep '^project-prefix:' .dev-kit.yml | sed 's/project-prefix: *//' | tr -d '[:space:]')
+          ASSIGNEE=$(grep '^assignee:' .dev-kit.yml | sed 's/assignee: *//' | tr -d '[:space:]')
+          PROJECT_NUMBER=$(grep '^github-project-number:' .dev-kit.yml | sed 's/github-project-number: *//' | tr -d '[:space:]')
+
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "assignee=$ASSIGNEE" >> "$GITHUB_OUTPUT"
+          echo "project_number=$PROJECT_NUMBER" >> "$GITHUB_OUTPUT"
+
+          echo "Config loaded — prefix: $PREFIX, assignee: $ASSIGNEE, project: $PROJECT_NUMBER"
+
+      - name: Extract issue number from branch name
+        id: issue
+        env:
+          BRANCH: ${{ github.head_ref }}
+          PREFIX: ${{ steps.config.outputs.prefix }}
+        run: |
+          # Branch format: type/PREFIX-number (e.g., feat/ATLAS-12)
+          # Extract the number after the prefix
+          ISSUE_NUMBER=$(echo "$BRANCH" | grep -oE "${PREFIX}-[0-9]+" | grep -oE "[0-9]+$" | sed 's/^0*//')
+
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "No issue number found in branch name: $BRANCH"
+            echo "Expected format: type/${PREFIX}-<number>"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Extracted issue number: #$ISSUE_NUMBER"
+          fi
+
+      - name: Generate PR description from commits
+        id: description
+        env:
+          BRANCH: ${{ github.head_ref }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          ISSUE_FOUND: ${{ steps.issue.outputs.found }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract type and scope from branch name (e.g., feat/ATLAS-12 → type: feat)
+          BRANCH_TYPE=$(echo "$BRANCH" | grep -oE '^[a-z]+' || echo "")
+
+          # Get all commit messages on this branch (relative to base)
+          COMMITS=$(git log "origin/${BASE_BRANCH}..HEAD" --pretty=format:"- %s" --reverse 2>/dev/null || echo "")
+
+          # Get list of changed files grouped by status
+          FILES_CHANGED=$(git diff "origin/${BASE_BRANCH}...HEAD" --stat 2>/dev/null | tail -1 || echo "")
+
+          # Build the PR body
+          {
+            echo "## Summary"
+            echo ""
+
+            # If linked to an issue, pull the issue title as context
+            if [ "$ISSUE_FOUND" = "true" ] && [ -n "$ISSUE_NUMBER" ]; then
+              ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title --jq '.title' 2>/dev/null || echo "")
+              if [ -n "$ISSUE_TITLE" ]; then
+                echo "Resolves: **$ISSUE_TITLE** (#$ISSUE_NUMBER)"
+                echo ""
+              fi
+            fi
+
+            echo "## Changes"
+            echo ""
+            if [ -n "$COMMITS" ]; then
+              echo "$COMMITS"
+            else
+              echo "- _No commits yet_"
+            fi
+            echo ""
+
+            if [ -n "$FILES_CHANGED" ]; then
+              echo "## Stats"
+              echo ""
+              echo "\`$FILES_CHANGED\`"
+              echo ""
+            fi
+
+            if [ "$ISSUE_FOUND" = "true" ] && [ -n "$ISSUE_NUMBER" ]; then
+              echo "---"
+              echo "Closes #$ISSUE_NUMBER"
+            fi
+          } > /tmp/pr-body.md
+
+          echo "PR description generated"
+
+      - name: Update PR body with generated description
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --body-file /tmp/pr-body.md
+          echo "Updated PR #$PR_NUMBER body with auto-generated description"
+
+      - name: Assign PR to author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSIGNEE: ${{ steps.config.outputs.assignee }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --add-assignee "$ASSIGNEE"
+          echo "Assigned PR #$PR_NUMBER to $ASSIGNEE"
+
+      - name: Copy labels from issue to PR
+        if: steps.issue.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Fetch labels from the linked issue
+          LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' | paste -sd ',' -)
+
+          if [ -n "$LABELS" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "$LABELS"
+            echo "Copied labels from issue #$ISSUE_NUMBER: $LABELS"
+          else
+            echo "No labels found on issue #$ISSUE_NUMBER"
+          fi
+
+      - name: Add PR to project board
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: ${{ steps.config.outputs.project_number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          gh project item-add "$PROJECT_NUMBER" \
+            --owner "$REPO_OWNER" \
+            --url "$PR_URL"
+          echo "Added PR to project board #$PROJECT_NUMBER"

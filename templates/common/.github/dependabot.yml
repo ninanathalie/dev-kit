@@ -1,0 +1,59 @@
+# Dependabot Configuration
+#
+# Automatically creates PRs to keep dependencies up to date.
+# Runs weekly on Mondays, targeting the develop branch.
+#
+# Ecosystems included:
+#   - npm: For JS/TS projects (Next.js, React, React Native, Vue)
+#   - github-actions: For all projects (keeps workflow actions up to date)
+#   - pub: For Flutter/Dart projects (uncomment if using Flutter)
+#
+# Dependabot PRs follow project commit conventions:
+#   - npm deps: "build(deps): bump <package>"
+#   - GitHub Actions: "ci(deps): bump <action>"
+#   - pub deps: "build(deps): bump <package>"
+#
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # ─── npm (JS/TS projects) ──────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    commit-message:
+      prefix: "build(deps):"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 10
+
+  # ─── GitHub Actions (all projects) ─────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    commit-message:
+      prefix: "ci(deps):"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # ─── pub (Flutter/Dart projects) ───────────────────────────────────────────────
+  # Uncomment the block below if your project uses Flutter/Dart.
+  #
+  # - package-ecosystem: "pub"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #   target-branch: "develop"
+  #   commit-message:
+  #     prefix: "build(deps):"
+  #   labels:
+  #     - "dependencies"

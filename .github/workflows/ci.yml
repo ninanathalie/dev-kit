@@ -1,0 +1,98 @@
+# CI Workflow — dev-kit (self-sustained)
+#
+# This is dev-kit's own CI, NOT a template.
+# Since dev-kit is a template library (not an application), there's no
+# build or lint step. Instead, we validate the integrity of the templates.
+#
+# Steps:
+#   1. Validate all file names follow kebab-case (with known exceptions)
+#   2. Validate shell scripts have correct syntax (shellcheck)
+#   3. Validate YAML files are well-formed
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Validate Templates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate kebab-case file names
+        run: |
+          # Check all tracked files for kebab-case compliance
+          # Uses the same logic as templates/common/scripts/check-kebab-case.sh
+
+          EXCEPTIONS="README.md README LICENSE LICENSE.md Makefile Dockerfile Procfile CHANGELOG.md CONTRIBUTING.md CODE_OF_CONDUCT.md CODEOWNERS analysis_options.yaml"
+          EXCEPTION_DIRS="ISSUE_TEMPLATE"
+
+          has_error=false
+
+          while IFS= read -r -d '' file; do
+            filename=$(basename "$file")
+            dirpath=$(dirname "$file")
+
+            # Skip exceptions
+            skip=false
+            for exception in $EXCEPTIONS; do
+              if [ "$filename" = "$exception" ]; then
+                skip=true
+                break
+              fi
+            done
+            [ "$skip" = true ] && continue
+
+            # Skip exception directories
+            for exception_dir in $EXCEPTION_DIRS; do
+              if echo "$dirpath" | grep -Fq "$exception_dir"; then
+                skip=true
+                break
+              fi
+            done
+            [ "$skip" = true ] && continue
+
+            # Skip husky hooks
+            if echo "$dirpath" | grep -Fq ".husky"; then
+              continue
+            fi
+
+            # Validate kebab-case
+            if ! echo "$filename" | grep -qE '^\.?[a-z0-9]+([.-][a-z0-9]+)*(\.[a-z0-9]+)*$'; then
+              echo "ERROR: Not kebab-case: $file"
+              has_error=true
+            fi
+          done < <(git ls-files -z)
+
+          if [ "$has_error" = true ]; then
+            echo "::error::Some file names do not follow kebab-case convention"
+            exit 1
+          fi
+
+          echo "All file names follow kebab-case"
+
+      - name: Validate shell scripts (shellcheck)
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "."
+          severity: "warning"
+
+      - name: Validate YAML files
+        run: |
+          pip install yamllint --quiet
+
+          # Lint all YAML files with relaxed rules (allow long lines in workflows)
+          yamllint -d "{extends: relaxed, rules: {line-length: disable, truthy: disable}}" \
+            $(find . -name "*.yml" -o -name "*.yaml" | grep -v node_modules | grep -v .git) \
+            && echo "All YAML files are valid"

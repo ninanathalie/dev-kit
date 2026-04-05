@@ -1,0 +1,76 @@
+# Branch Naming Validation Workflow
+#
+# Runs on pull requests targeting develop or main branches.
+# Validates that the PR source branch follows the naming convention.
+#
+# Expected format: {type}/{PREFIX}-{number}
+#   e.g., feat/ATLAS-09, fix/TEMPO-12, chore/BASE-01
+#
+# The project prefix is read from `.dev-kit.yml` at the repo root.
+# Skips validation for base branches (develop, main, master).
+#
+# Allowed types: feat, fix, hotfix, chore, docs, refactor, test
+#
+# Required status check name: "Validate Branch Name"
+
+name: Validate Branch Name
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - develop
+      - main
+      - master
+
+jobs:
+  validate:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read project prefix from .dev-kit.yml
+        id: config
+        run: |
+          # Extract the project-prefix value from .dev-kit.yml
+          PREFIX=$(grep '^project-prefix:' .dev-kit.yml | sed 's/project-prefix: *//' | tr -d '[:space:]')
+
+          if [ -z "$PREFIX" ]; then
+            echo "::error::Could not read project-prefix from .dev-kit.yml"
+            exit 1
+          fi
+
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "Project prefix: $PREFIX"
+
+      - name: Validate branch name
+        env:
+          BRANCH: ${{ github.head_ref }}
+          PREFIX: ${{ steps.config.outputs.prefix }}
+        run: |
+          # Skip validation for base branches
+          if echo "$BRANCH" | grep -qE '^(develop|main|master)$'; then
+            echo "Base branch detected — skipping validation."
+            exit 0
+          fi
+
+          # Allowed branch types
+          TYPES="feat|fix|hotfix|chore|docs|refactor|test"
+
+          # Pattern: type/PREFIX-number (e.g., feat/ATLAS-09)
+          PATTERN="^($TYPES)/${PREFIX}-[0-9]+$"
+
+          if echo "$BRANCH" | grep -qE "$PATTERN"; then
+            echo "Branch name is valid: $BRANCH"
+          else
+            echo "::error::Invalid branch name: $BRANCH"
+            echo ""
+            echo "Branch name must follow the format: {type}/${PREFIX}-{number}"
+            echo "  Example: feat/${PREFIX}-01, fix/${PREFIX}-12"
+            echo ""
+            echo "Allowed types: feat, fix, hotfix, chore, docs, refactor, test"
+            exit 1
+          fi

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Commit-msg hook — validates commit message format.
+#
+# Ensures all commits follow Conventional Commits:
+#   type: message            → e.g., "feat: add login page"
+#   type(scope): message     → e.g., "feat(auth): add login page"
+#
+# Configuration: commitlint.config.mjs
+# Installed by Husky. See: https://typicode.github.io/husky
+
+npx --no -- commitlint --edit "$1"
