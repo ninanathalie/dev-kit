@@ -14,6 +14,9 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+
 jobs:
   auto-assign:
     name: Assign & Add to Project
