@@ -1,0 +1,162 @@
+# Check Dev-Kit Updates Workflow
+#
+# Runs weekly (Mondays) and on manual dispatch.
+# Compares local template files against the latest dev-kit templates
+# and opens an issue if updates are available.
+#
+# Fully self-contained — no registry or cross-repo tokens needed.
+# Each project independently checks for updates from dev-kit.
+#
+# The dev-kit repo URL is hardcoded below. Update if you forked dev-kit.
+
+name: Check Dev-Kit Updates
+
+on:
+  schedule:
+    # Every Monday at 9:00 AM UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    name: Check for Updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Clone latest dev-kit
+        run: |
+          git clone --depth 1 https://github.com/ninanathalie/dev-kit.git /tmp/dev-kit
+
+      - name: Read config from .dev-kit.yml
+        id: config
+        run: |
+          FRAMEWORK=$(grep '^framework:' .dev-kit.yml | sed 's/framework: *//' | tr -d '[:space:]')
+          echo "framework=$FRAMEWORK" >> "$GITHUB_OUTPUT"
+          echo "Framework: $FRAMEWORK"
+
+      - name: Compare templates
+        id: compare
+        env:
+          FRAMEWORK: ${{ steps.config.outputs.framework }}
+        run: |
+          DEV_KIT="/tmp/dev-kit/templates"
+          HAS_UPDATES=false
+          CHANGES=""
+
+          # Compare a file and record if it differs
+          compare_file() {
+            local src="$1"
+            local dest="$2"
+            local label="$3"
+
+            if [ ! -f "$src" ]; then
+              return
+            fi
+
+            if [ ! -f "$dest" ]; then
+              CHANGES="${CHANGES}- **NEW** \`${label}\`\n"
+              HAS_UPDATES=true
+            elif ! diff -q "$src" "$dest" > /dev/null 2>&1; then
+              local lines=$(diff "$dest" "$src" | grep -c '^[<>]' || true)
+              CHANGES="${CHANGES}- **MODIFIED** \`${label}\` (${lines} lines differ)\n"
+              HAS_UPDATES=true
+            fi
+          }
+
+          # Common templates
+          compare_file "$DEV_KIT/common/.editorconfig" ".editorconfig" ".editorconfig"
+          compare_file "$DEV_KIT/common/.prettierrc.mjs" ".prettierrc.mjs" ".prettierrc.mjs"
+          compare_file "$DEV_KIT/common/commitlint.config.mjs" "commitlint.config.mjs" "commitlint.config.mjs"
+          compare_file "$DEV_KIT/common/lint-staged.config.mjs" "lint-staged.config.mjs" "lint-staged.config.mjs"
+          compare_file "$DEV_KIT/common/.husky/pre-commit" ".husky/pre-commit" ".husky/pre-commit"
+          compare_file "$DEV_KIT/common/.husky/commit-msg" ".husky/commit-msg" ".husky/commit-msg"
+          compare_file "$DEV_KIT/common/scripts/check-kebab-case.sh" "scripts/check-kebab-case.sh" "scripts/check-kebab-case.sh"
+          compare_file "$DEV_KIT/common/scripts/create-issue.sh" "scripts/create-issue.sh" "scripts/create-issue.sh"
+          compare_file "$DEV_KIT/common/.github/dependabot.yml" ".github/dependabot.yml" ".github/dependabot.yml"
+
+          # Common workflows
+          for workflow in pr-title.yml branch-naming.yml pr-autofill.yml create-branch.yml issue-auto-assign.yml e2e.yml check-devkit-updates.yml; do
+            compare_file "$DEV_KIT/common/.github/workflows/$workflow" ".github/workflows/$workflow" ".github/workflows/$workflow"
+          done
+
+          # Issue templates
+          for template in bug-report.yml feature-request.yml chore.yml config.yml; do
+            compare_file "$DEV_KIT/common/.github/ISSUE_TEMPLATE/$template" ".github/ISSUE_TEMPLATE/$template" ".github/ISSUE_TEMPLATE/$template"
+          done
+
+          # Framework-specific templates
+          compare_file "$DEV_KIT/$FRAMEWORK/.github/workflows/ci.yml" ".github/workflows/ci.yml" ".github/workflows/ci.yml"
+          compare_file "$DEV_KIT/$FRAMEWORK/.gitignore" ".gitignore" ".gitignore"
+
+          if [ "$FRAMEWORK" = "flutter" ]; then
+            compare_file "$DEV_KIT/$FRAMEWORK/analysis_options.yaml" "analysis_options.yaml" "analysis_options.yaml"
+            compare_file "$DEV_KIT/flutter/lint-staged.config.mjs" "lint-staged.config.mjs" "lint-staged.config.mjs"
+          else
+            compare_file "$DEV_KIT/$FRAMEWORK/eslint.config.mjs" "eslint.config.mjs" "eslint.config.mjs"
+          fi
+
+          # Write outputs
+          echo "has_updates=$HAS_UPDATES" >> "$GITHUB_OUTPUT"
+
+          # Write changes to file (preserves newlines)
+          echo -e "$CHANGES" > /tmp/changes.txt
+
+          if [ "$HAS_UPDATES" = true ]; then
+            echo "Updates available!"
+          else
+            echo "Everything is up to date."
+          fi
+
+      - name: Check for existing update issue
+        if: steps.compare.outputs.has_updates == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Search for an open issue with the dev-kit update title
+          EXISTING=$(gh issue list --state open --search "chore(deps): dev-kit templates have been updated" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "Existing update issue found: #$EXISTING — skipping creation"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open update issue
+        if: steps.compare.outputs.has_updates == 'true' && steps.existing.outputs.found == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGES: ""
+        run: |
+          CHANGES=$(cat /tmp/changes.txt)
+
+          gh issue create \
+            --title "chore(deps): dev-kit templates have been updated" \
+            --label "chore,dependencies" \
+            --body "$(cat <<EOF
+          ## Dev-Kit Update Available
+
+          New template updates are available from [dev-kit](https://github.com/ninanathalie/dev-kit).
+
+          ### Changes Detected
+          $CHANGES
+
+          ### How to Update
+          Run the update script from your project root:
+          \`\`\`bash
+          bash /path/to/dev-kit/scripts/update.sh
+          \`\`\`
+
+          The script will show you a diff of each change and let you selectively apply updates.
+
+          ---
+          *This issue was automatically created by the [check-devkit-updates](https://github.com/ninanathalie/dev-kit) workflow.*
+          EOF
+          )"
+
+          echo "Update issue created"

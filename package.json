@@ -1,0 +1,37 @@
+{
+  "name": "@ninanathalie/dev-kit",
+  "version": "1.0.0",
+  "description": "A reusable development toolkit that bootstraps any project with standardized workflows, hooks, linting, testing, Docker, and GitHub automation.",
+  "type": "module",
+  "bin": {
+    "dev-kit": "./bin/dev-kit.js"
+  },
+  "files": [
+    "bin/",
+    "templates/",
+    "scripts/"
+  ],
+  "keywords": [
+    "dev-kit",
+    "scaffold",
+    "boilerplate",
+    "github-actions",
+    "eslint",
+    "prettier",
+    "commitlint",
+    "husky",
+    "playwright",
+    "vitest",
+    "docker",
+    "sentry"
+  ],
+  "author": "ninanathalie",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ninanathalie/dev-kit.git"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
