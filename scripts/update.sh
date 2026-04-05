@@ -101,6 +101,7 @@ add_common_file ".github/workflows/pr-autofill.yml" ".github/workflows/pr-autofi
 add_common_file ".github/workflows/create-branch.yml" ".github/workflows/create-branch.yml"
 add_common_file ".github/workflows/issue-auto-assign.yml" ".github/workflows/issue-auto-assign.yml"
 add_common_file ".github/workflows/e2e.yml" ".github/workflows/e2e.yml"
+add_common_file ".github/workflows/check-devkit-updates.yml" ".github/workflows/check-devkit-updates.yml"
 
 # Lint-staged config (framework-specific source)
 if [ "$FRAMEWORK" = "flutter" ]; then
