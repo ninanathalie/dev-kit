@@ -26,6 +26,9 @@ jobs:
     name: Validate Templates
     runs-on: ubuntu-latest
 
+    # Skip Dependabot PRs — they only change dependency versions, not templates
+    if: github.actor != 'dependabot[bot]'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

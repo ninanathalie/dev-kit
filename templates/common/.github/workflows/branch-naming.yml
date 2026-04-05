@@ -28,6 +28,9 @@ jobs:
     name: Validate Branch Name
     runs-on: ubuntu-latest
 
+    # Skip Dependabot PRs — their branch names follow a different convention
+    if: github.actor != 'dependabot[bot]'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
