@@ -23,6 +23,10 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  contents: write
+  issues: write
+
 jobs:
   create-branch:
     name: Create Branch
