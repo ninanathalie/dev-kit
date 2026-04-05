@@ -32,8 +32,9 @@ DIM='\033[2m'
 NC='\033[0m'
 
 # ─── Resolve paths ──────────────────────────────────────────────────────────────
+# DEV_KIT_DIR can be set by the CLI (npx) or derived from script path
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DEV_KIT_DIR="$(dirname "$SCRIPT_DIR")"
+DEV_KIT_DIR="${DEV_KIT_DIR:-$(dirname "$SCRIPT_DIR")}"
 TEMPLATES_DIR="$DEV_KIT_DIR/templates"
 TARGET_DIR="$(pwd)"
 

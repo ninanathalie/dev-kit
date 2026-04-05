@@ -26,14 +26,34 @@ A reusable development toolkit that bootstraps any project with standardized wor
 | **Dependabot** | Automated dependency updates (npm, GitHub Actions, pub) |
 | **Setup Script** | Interactive bootstrapping for new projects |
 | **Update Script** | Selective template updates with diff preview |
+| **CLI (npx)** | `npx @ninanathalie/dev-kit init` / `update` / `create-issue` |
+
+## Installation
+
+### Via npx (recommended for JS/TS projects)
+
+No installation needed — run directly:
+
+```bash
+npx @ninanathalie/dev-kit init
+```
+
+### Via bash scripts (Flutter or without npm)
+
+```bash
+git clone https://github.com/ninanathalie/dev-kit.git
+bash /path/to/dev-kit/scripts/setup.sh
+```
 
 ## Quick Start
 
 ### 1. Bootstrap a New Project
 
-From your target project directory:
-
 ```bash
+# Using npx
+npx @ninanathalie/dev-kit init
+
+# Or using bash
 bash /path/to/dev-kit/scripts/setup.sh
 ```
 
@@ -53,6 +73,10 @@ It generates `.dev-kit.yml` and copies all relevant templates into your project.
 When dev-kit templates are updated, pull the latest changes:
 
 ```bash
+# Using npx
+npx @ninanathalie/dev-kit update
+
+# Or using bash
 bash /path/to/dev-kit/scripts/update.sh
 ```
 
@@ -61,6 +85,10 @@ The script compares your files against the latest templates, shows a diff, and l
 ### 3. Create Issues from the Terminal
 
 ```bash
+# Using npx
+npx @ninanathalie/dev-kit create-issue --type feat --title "add user authentication"
+
+# Or using bash
 bash scripts/create-issue.sh --type feat --title "add user authentication"
 bash scripts/create-issue.sh --type fix --title "login redirect broken" --labels "bug,priority-high"
 ```
@@ -72,6 +100,9 @@ Issues are auto-assigned and added to your project board.
 ```
 dev-kit/
 ├── README.md
+├── package.json                       # npm package config (@ninanathalie/dev-kit)
+├── bin/
+│   └── dev-kit.js                     # CLI entry point (npx support)
 ├── .github/
 │   └── workflows/                     # Dev-kit's own CI (self-sustained)
 │       ├── ci.yml                     #   Kebab-case, shellcheck, yamllint
@@ -228,6 +259,10 @@ Projects bootstrapped with dev-kit check for updates automatically via the `chec
 To manually update:
 
 ```bash
+# Using npx
+npx @ninanathalie/dev-kit update
+
+# Or using bash
 bash /path/to/dev-kit/scripts/update.sh
 ```
 
