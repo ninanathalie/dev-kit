@@ -19,6 +19,9 @@ jobs:
     name: Validate PR Title
     runs-on: ubuntu-latest
 
+    # Skip Dependabot PRs — their titles follow a different convention
+    if: github.actor != 'dependabot[bot]'
+
     steps:
       - name: Check PR title format
         env:
