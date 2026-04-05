@@ -1,6 +1,6 @@
 {
   "name": "@ninanathalie/dev-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A reusable development toolkit that bootstraps any project with standardized workflows, hooks, linting, testing, Docker, and GitHub automation.",
   "type": "module",
   "bin": {
